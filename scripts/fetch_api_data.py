@@ -83,8 +83,9 @@ def fetch_census_acs(api_key: str | None, output_dir: Path) -> None:
         return
 
     variables = "B25077_001E,B19013_001E,B01003_001E,B25003_001E,B25003_002E,B25003_003E"
-    # Try 2022 first, fall back to 2021
-    years = ["2022", "2021"]
+    # Try recent years, falling back until one works.
+    # Note: 2020+ changed ZCTA geography; 2019 is most reliable without special params.
+    years = ["2022", "2021", "2020", "2019"]
     data = None
 
     for year in years:
