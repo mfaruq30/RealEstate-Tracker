@@ -5,3 +5,14 @@ __pycache__/
 outputs/
 .mplconfig/
 *.pyc
+
+# Large data files — download via scripts/download_datasets.py
+data/raw/*.csv
+data/raw/*.tsv
+data/raw/*.geojson
+data/raw/*.zip
+data/raw/*.gz
+data/raw/*.txt
+data/processed/*.csv
+data/processed/*.parquet
+!data/sample_listings.csv
