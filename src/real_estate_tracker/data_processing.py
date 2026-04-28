@@ -334,7 +334,7 @@ def select_assessment_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.
     candidate_cols = [
         "sqft", "lot_sqft", "bedrooms", "bathrooms", "total_rooms",
         "num_floors", "year_built", "fireplaces",
-        "price_per_sqft", "sqft_per_room", "home_age",
+        "sqft_per_room", "home_age",
         "bath_to_bed_ratio", "lot_to_living_ratio",
         "is_remodeled", "renovation_gap",
         # Enrichment columns (added by feature_enrichment.py)

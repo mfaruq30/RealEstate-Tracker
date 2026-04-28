@@ -56,3 +56,55 @@ def save_preliminary_figures(df: pd.DataFrame, y_true: pd.Series, y_pred: pd.Ser
 
     return paths
 
+def save_feature_importance_plot(
+    feature_names: list[str],
+    importances,
+    output_dir: str,
+) -> str:
+    """Save a horizontal bar chart of Random Forest feature importances."""
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Sort features by importance (descending), then reverse for horizontal display
+    pairs = sorted(zip(feature_names, importances), key=lambda x: x[1])
+    sorted_names = [p[0] for p in pairs]
+    sorted_importances = [p[1] for p in pairs]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    ax.barh(sorted_names, sorted_importances)
+    ax.set_title("Random Forest Feature Importance")
+    ax.set_xlabel("Importance (Gini)")
+    fig.tight_layout()
+
+    path = os.path.join(output_dir, "feature_importance.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def save_residual_distribution_plot(
+    residuals_pct,
+    output_dir: str,
+) -> str:
+    """Save a histogram of percentage residuals (predicted - actual) / actual * 100.
+
+    The tails of this distribution represent properties the model believes are
+    mispriced relative to their features (the project's main deliverable).
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Clip extreme outliers for readable axis (a few residuals can exceed 500%)
+    clipped = residuals_pct.clip(-100, 100)
+
+    fig, ax = plt.subplots(figsize=(8, 4))
+    ax.hist(clipped, bins=50, edgecolor="black", alpha=0.8)
+    ax.axvline(0, color="red", linestyle="--", linewidth=1, label="Perfect prediction")
+    ax.set_title("Distribution of Residuals (% of Actual Price)")
+    ax.set_xlabel("Residual % (predicted − actual) / actual × 100")
+    ax.set_ylabel("Count")
+    ax.legend()
+    fig.tight_layout()
+
+    path = os.path.join(output_dir, "residual_distribution.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path

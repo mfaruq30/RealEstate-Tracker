@@ -42,6 +42,7 @@ def train_and_evaluate(x: pd.DataFrame, y: pd.Series, random_state: int = 42) ->
         "y_test": y_test,
         "predictions": predictions,
         "metrics": metrics,
+        "models": models,
     }
 
 
