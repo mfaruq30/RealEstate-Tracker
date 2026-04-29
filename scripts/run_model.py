@@ -25,11 +25,12 @@ if str(SRC_DIR) not in sys.path:
 import pandas as pd
 
 from real_estate_tracker.data_processing import select_assessment_model_columns
-from real_estate_tracker.modeling import save_metrics, train_and_evaluate
+from real_estate_tracker.modeling import cross_validate_models, save_metrics, train_and_evaluate
 from real_estate_tracker.visualization import (
     save_preliminary_figures,
     save_feature_importance_plot,
     save_residual_distribution_plot,
+    save_residuals_vs_predicted_plot,
 )
 
 
@@ -91,8 +92,25 @@ def main() -> None:
         print(f"    RMSE: ${metrics['rmse']:>12,.0f}")
         print(f"    R²:   {metrics['r2']:>12.4f}")
 
-    # --- Step 5: Save metrics ---
-    metrics_path = save_metrics(result["metrics"], str(output_dir))
+    # --- Step 4b: Cross-validation ---
+    print("\n" + "=" * 60)
+    print("STEP 4b: 5-fold cross-validation")
+    print("=" * 60)
+    print("  Running 5-fold CV (this will take a few minutes)...")
+    cv_results = cross_validate_models(x, y, n_folds=5)
+
+    for model_name, cv_metrics in cv_results.items():
+        print(f"\n  {model_name} (5-fold CV):")
+        print(f"    R²:   {cv_metrics['r2_mean']:.4f} ± {cv_metrics['r2_std']:.4f}")
+        print(f"    MAE:  ${cv_metrics['mae_mean']:>12,.0f} ± ${cv_metrics['mae_std']:>10,.0f}")
+        print(f"    RMSE: ${cv_metrics['rmse_mean']:>12,.0f} ± ${cv_metrics['rmse_std']:>10,.0f}")
+
+    # --- Step 5: Save metrics (single split + CV combined) ---
+    combined_metrics = {
+        "single_split": result["metrics"],
+        "cross_validation": cv_results,
+    }
+    metrics_path = save_metrics(combined_metrics, str(output_dir))
     print(f"\n  Saved metrics: {metrics_path}")
 
     # --- Step 6: Save figures (uses random forest predictions) ---
@@ -135,7 +153,15 @@ def main() -> None:
     )
     print(f"  Saved residual distribution: {residual_dist_path}")
     saved_figures.append(residual_dist_path)
-    
+
+    residuals_vs_pred_path = save_residuals_vs_predicted_plot(
+        predicted=residuals_df["predicted_price_rf"],
+        residuals=residuals_df["residual_rf"],
+        output_dir=str(figure_dir),
+    )
+    print(f"  Saved residuals vs predicted: {residuals_vs_pred_path}")
+    saved_figures.append(residuals_vs_pred_path)
+
     residuals_path = output_dir / "residuals.csv"
     residuals_df.to_csv(residuals_path, index=False)
     print(f"  Saved residuals: {residuals_path}")
@@ -146,7 +172,8 @@ def main() -> None:
         "n_rows": int(len(df)),
         "n_features": len(x.columns),
         "features_used": list(x.columns),
-        "metrics": result["metrics"],
+        "metrics_single_split": result["metrics"],
+        "metrics_cv_5fold": cv_results,
         "figures": saved_figures,
     }
     summary_path = output_dir / "run_summary.json"

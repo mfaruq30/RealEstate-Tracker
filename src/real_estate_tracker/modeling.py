@@ -53,3 +53,61 @@ def save_metrics(metrics: dict, output_dir: str) -> str:
         json.dump(metrics, f, indent=2)
     return path
 
+def cross_validate_models(
+    x: pd.DataFrame,
+    y: pd.Series,
+    n_folds: int = 5,
+    random_state: int = 42,
+) -> dict:
+    """Run K-fold cross-validation for both models and return per-fold + summary stats.
+
+    Returns a dict shaped like:
+    {
+        "linear_regression": {
+            "r2_scores": [...],   # one per fold
+            "mae_scores": [...],
+            "rmse_scores": [...],
+            "r2_mean": float, "r2_std": float,
+            "mae_mean": float, "mae_std": float,
+            "rmse_mean": float, "rmse_std": float,
+        },
+        "random_forest": { ... same shape ... }
+    }
+    """
+    from sklearn.model_selection import KFold, cross_val_score
+
+    kf = KFold(n_splits=n_folds, shuffle=True, random_state=random_state)
+
+    models = {
+        "linear_regression": LinearRegression(),
+        "random_forest": RandomForestRegressor(
+            n_estimators=150,
+            max_depth=10,
+            random_state=random_state,
+            n_jobs=-1,
+        ),
+    }
+
+    results: dict[str, dict] = {}
+    for name, model in models.items():
+        # sklearn returns negative MAE/MSE so we flip signs to get positive numbers
+        r2 = cross_val_score(model, x, y, cv=kf, scoring="r2")
+        neg_mae = cross_val_score(model, x, y, cv=kf, scoring="neg_mean_absolute_error")
+        neg_mse = cross_val_score(model, x, y, cv=kf, scoring="neg_mean_squared_error")
+
+        mae = -neg_mae
+        rmse = np.sqrt(-neg_mse)
+
+        results[name] = {
+            "r2_scores": r2.tolist(),
+            "mae_scores": mae.tolist(),
+            "rmse_scores": rmse.tolist(),
+            "r2_mean": float(r2.mean()),
+            "r2_std": float(r2.std()),
+            "mae_mean": float(mae.mean()),
+            "mae_std": float(mae.std()),
+            "rmse_mean": float(rmse.mean()),
+            "rmse_std": float(rmse.std()),
+        }
+
+    return results

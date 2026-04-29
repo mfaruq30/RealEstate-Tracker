@@ -108,3 +108,30 @@ def save_residual_distribution_plot(
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
+
+def save_residuals_vs_predicted_plot(
+    predicted: pd.Series,
+    residuals: pd.Series,
+    output_dir: str,
+) -> str:
+    """Save a residuals-vs-predicted scatter plot — the standard model diagnostic.
+
+    A well-fit model should show residuals randomly scattered around 0 across
+    the full range of predicted values. Patterns (fanning, curvature, bias)
+    indicate model weaknesses.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+    ax.scatter(predicted, residuals, alpha=0.15, s=8)
+    ax.axhline(0, color="red", linestyle="--", linewidth=1, label="Perfect prediction")
+    ax.set_title("Residuals vs Predicted Price (Random Forest)")
+    ax.set_xlabel("Predicted Price (USD)")
+    ax.set_ylabel("Residual = Predicted − Actual (USD)")
+    ax.legend()
+    fig.tight_layout()
+
+    path = os.path.join(output_dir, "residuals_vs_predicted.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
