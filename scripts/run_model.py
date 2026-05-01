@@ -31,9 +31,8 @@ from real_estate_tracker.visualization import (
     save_feature_importance_plot,
     save_residual_distribution_plot,
     save_residuals_vs_predicted_plot,
-    save_interaction_pdp_plot,
+    save_error_by_price_tier_plot,
 )
-
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train models on the enriched Boston dataset.")
@@ -89,9 +88,11 @@ def main() -> None:
     print("=" * 60)
     for model_name, metrics in result["metrics"].items():
         print(f"\n  {model_name}:")
-        print(f"    MAE:  ${metrics['mae']:>12,.0f}")
-        print(f"    RMSE: ${metrics['rmse']:>12,.0f}")
-        print(f"    R²:   {metrics['r2']:>12.4f}")
+        print(f"    MAE:        ${metrics['mae']:>12,.0f}")
+        print(f"    RMSE:       ${metrics['rmse']:>12,.0f}")
+        print(f"    R²:         {metrics['r2']:>13.4f}")
+        print(f"    MAPE:        {metrics['mape']:>12.2f}%")
+        print(f"    Median APE:  {metrics['median_ape']:>12.2f}%")
 
     # --- Step 4b: Cross-validation ---
     print("\n" + "=" * 60)
@@ -102,9 +103,10 @@ def main() -> None:
 
     for model_name, cv_metrics in cv_results.items():
         print(f"\n  {model_name} (5-fold CV):")
-        print(f"    R²:   {cv_metrics['r2_mean']:.4f} ± {cv_metrics['r2_std']:.4f}")
-        print(f"    MAE:  ${cv_metrics['mae_mean']:>12,.0f} ± ${cv_metrics['mae_std']:>10,.0f}")
-        print(f"    RMSE: ${cv_metrics['rmse_mean']:>12,.0f} ± ${cv_metrics['rmse_std']:>10,.0f}")
+        print(f"    R²:    {cv_metrics['r2_mean']:.4f} ± {cv_metrics['r2_std']:.4f}")
+        print(f"    MAE:   ${cv_metrics['mae_mean']:>12,.0f} ± ${cv_metrics['mae_std']:>10,.0f}")
+        print(f"    RMSE:  ${cv_metrics['rmse_mean']:>12,.0f} ± ${cv_metrics['rmse_std']:>10,.0f}")
+        print(f"    MAPE:  {cv_metrics['mape_mean']:.2f}% ± {cv_metrics['mape_std']:.2f}%")
 
     # --- Step 5: Save metrics (single split + CV combined) ---
     combined_metrics = {
@@ -148,6 +150,27 @@ def main() -> None:
     residuals_df["residual_pct_rf"] = (
         residuals_df["residual_rf"] / residuals_df["actual_price"] * 100
     )
+    # --- Price-tier breakdown: how does error vary by price band? ---
+    print("\n" + "=" * 60)
+    print("STEP 4c: Error breakdown by price tier")
+    print("=" * 60)
+    bins = [0, 500_000, 1_000_000, 2_000_000, float("inf")]
+    labels = ["<$500K", "$500K-$1M", "$1M-$2M", "$2M+"]
+    residuals_df["price_tier"] = pd.cut(residuals_df["actual_price"], bins=bins, labels=labels)
+    tier_breakdown = []
+    for tier in labels:
+        tier_data = residuals_df[residuals_df["price_tier"] == tier]
+        if len(tier_data) == 0:
+            continue
+        mae_tier = tier_data["residual_rf"].abs().mean()
+        mape_tier = (tier_data["residual_rf"].abs() / tier_data["actual_price"] * 100).mean()
+        tier_breakdown.append({
+            "tier": tier,
+            "n_properties": int(len(tier_data)),
+            "mae": float(mae_tier),
+            "mape_pct": float(mape_tier),
+        })
+        print(f"  {tier:>12}: n={len(tier_data):>6,}, MAE=${mae_tier:>10,.0f}, MAPE={mape_tier:>5.1f}%")
     residual_dist_path = save_residual_distribution_plot(
         residuals_pct=residuals_df["residual_pct_rf"],
         output_dir=str(figure_dir),
@@ -163,16 +186,13 @@ def main() -> None:
     print(f"  Saved residuals vs predicted: {residuals_vs_pred_path}")
     saved_figures.append(residuals_vs_pred_path)
 
-    # Partial dependence plot — visualizes feature interaction
-    print("  Computing partial dependence (1-2 min)...")
-    pdp_path = save_interaction_pdp_plot(
-        model=result["models"]["random_forest"],
-        x=x,
-        feature_pair=("median_household_income", "bathrooms"),
+    # Bar chart: MAE / MAPE by price tier — visualizes the table from STEP 4c
+    tier_plot_path = save_error_by_price_tier_plot(
+        tier_breakdown=tier_breakdown,
         output_dir=str(figure_dir),
     )
-    print(f"  Saved partial dependence plot: {pdp_path}")
-    saved_figures.append(pdp_path)
+    print(f"  Saved error-by-tier plot: {tier_plot_path}")
+    saved_figures.append(tier_plot_path)
 
     residuals_path = output_dir / "residuals.csv"
     residuals_df.to_csv(residuals_path, index=False)
@@ -186,6 +206,7 @@ def main() -> None:
         "features_used": list(x.columns),
         "metrics_single_split": result["metrics"],
         "metrics_cv_5fold": cv_results,
+        "price_tier_breakdown": tier_breakdown,
         "figures": saved_figures,
     }
     summary_path = output_dir / "run_summary.json"

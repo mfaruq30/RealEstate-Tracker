@@ -1,199 +1,346 @@
-# Real Estate Value Analyzer  
-**CS 506 Final Project Proposal**
+# Real Estate Value Analyzer
+
+**CS 506 Final Project** — A residual-based mispricing analyzer for Greater Boston residential real estate.
+
+📺 **Presentation video:** *[YouTube link to be added]*
+🎬 **Build & run demo:** *[YouTube link to be added]*
 
 ---
 
-## 1. Project Description & Motivation
-The residential real estate market exhibits significant information asymmetry: buyers and investors often struggle to determine whether a listing is priced reasonably relative to comparable properties. While existing platforms provide automated estimates, these systems are proprietary and often fail to incorporate granular qualitative signals such as property condition or hyper-local market context.
+## Quick Start
 
-This project aims to build an end-to-end data science pipeline that estimates **expected market prices for residential properties based on observable features**, and then analyzes **pricing deviations relative to comparable homes**. Rather than asserting intrinsic or “true” value, the project focuses on identifying **relative mispricing** by comparing a listing’s price to the model’s expectation given similar properties.
-
-The final product will be an interactive visualization that highlights properties priced unusually high or low relative to their peers, enabling exploratory analysis of potential market inefficiencies.
-
----
-
-## 2. Project Goals
-The primary goal of this project is to practice the full data science lifecycle—from data collection and cleaning to modeling, evaluation, and visualization—while answering a concrete applied question:
-
-**Can we identify listings that are priced unusually high or low relative to comparable homes by quantifying both structured and unstructured listing data?**
-
-### Specific, Measurable Goals
-- **Data Collection:**  
-  Assemble a dataset of 5,000+ residential property listings from a major metropolitan area (e.g., Greater Boston), including structured attributes and unstructured text descriptions.
-
-- **Feature Engineering:**  
-  Create at least three novel feature groups:
-  - **Condition Indicators:** NLP-derived signals from listing descriptions (e.g., “needs work” vs. “recently renovated”).
-  - **Layout Proxies:** Ratios such as square-feet-per-room to approximate layout efficiency.
-  - **Neighborhood Context:** Local price statistics derived from nearby comparable properties.
-
-- **Modeling:**  
-  Train a regression model to estimate expected listing price, using a baseline linear model and a more expressive tree-based model.
-
-- **Evaluation:**  
-  Assess performance using held-out data and residual analysis rather than absolute price accuracy alone.
-
-- **Visualization:**  
-  Build an interactive map that allows users to explore properties by pricing deviation (predicted price minus listing price).
-
----
-
-## 3. Data Collection Plan
-
-### Data Sources
-Data will be collected from publicly available real estate listings and open property datasets for a selected metropolitan area. When possible, structured open datasets and documented APIs will be preferred to ensure reproducibility and compliance.
-
-To address proposal feedback, we are now explicitly tracking candidate sources:
-- [Zillow Research Data](https://www.zillow.com/research/data/)
-- [Redfin Data Center](https://www.redfin.com/news/data-center/)
-- [MassGIS Data Portal](https://www.mass.gov/orgs/massgis-bureau-of-geographic-information)
-
-### Collection Method
-- Python-based data ingestion pipeline  
-- HTML parsing for publicly accessible listing pages or structured datasets  
-- Data collected at a low request rate and in compliance with site policies  
-- Raw data stored locally for reproducibility  
-
-### Fields Collected
-- **Target Variable:** Listing price  
-- **Structured Features:** Address (or approximate location), ZIP code, bedrooms, bathrooms, square footage, lot size, year built, HOA fees, property type  
-- **Unstructured Features:** Property description text  
-
----
-
-## 4. Data Cleaning & Feature Extraction
-
-### Data Cleaning
-- **Missing Values:**  
-  Impute missing numeric attributes (e.g., year built, lot size) using K-nearest-neighbor imputation based on geographic or feature similarity.
-- **Outliers:**  
-  Remove obvious data errors (e.g., zero price) and extreme outliers that do not reflect typical residential properties.
-- **Standardization:**  
-  Normalize numeric features where appropriate.
-
-### Feature Engineering
-- **NLP Condition Signals:**  
-  Extract binary or weighted indicators from listing descriptions using keyword matching or TF-IDF techniques.
-- **Geospatial Comparables:**  
-  Compute average price-per-square-foot of nearby properties to capture local market effects.
-- **Volatility Metrics:**  
-  Measure neighborhood-level price variability to approximate market stability.
-
-Checkpoint 1 feature justification (implemented):
-- `sqft`, `bedrooms`, `bathrooms`, `year_built`: core structural drivers of home price.
-- `sqft_per_room`: layout-efficiency proxy to separate similarly sized homes with different room counts.
-- `is_renovated_signal`, `needs_work_signal`: lightweight NLP condition indicators to capture quality not visible in numeric fields.
-- `home_age`: interpretable transformation of `year_built` for non-linear age effects.
-
----
-
-## 5. Modeling Plan
-The task will be framed as a **regression problem**.
-
-- **Baseline Model:** Linear Regression with ElasticNet regularization  
-- **Primary Model:** Tree-based regression (e.g., Random Forest or Gradient Boosting)  
-- **Validation:** K-Fold Cross-Validation (k = 5)  
-- **Interpretation:** Residuals (predicted price − listing price) will be used to analyze relative mispricing rather than absolute predictions.
-
----
-
-## 6. Visualization Plan
-- **Interactive Map:**  
-  Plot properties geographically and color points by pricing deviation (underpriced vs. overpriced relative to model expectations).
-- **Feature Importance Plot:**  
-  Visualize which features contribute most to predicted price.
-- **Actual vs. Predicted Scatter Plot:**  
-  Assess overall model fit and residual distribution.
-
----
-
-## 7. Testing Strategy
-- **Unit Tests:**  
-  Validate feature engineering functions (e.g., layout ratio calculations).
-- **Pipeline Tests:**  
-  Ensure the full modeling pipeline can accept a single property’s features and return a numeric prediction.
-- **Data Sanity Checks:**  
-  Enforce constraints such as positive square footage and price.
-
-A GitHub Actions workflow is included to run tests automatically.
-
----
-
-## 8. Project Timeline (8 Weeks)
-- **Week 1:** Repository setup, environment configuration, pipeline scaffolding  
-- **Week 2:** Data collection and raw data storage  
-- **Week 3 (Check-In 1):** Initial cleaning, EDA, baseline modeling artifacts  
-- **Week 4:** Feature engineering (NLP and geospatial features)  
-- **Week 5:** Model training and baseline comparisons  
-- **Week 6 (Check-In 2):** Model evaluation and error analysis  
-- **Week 7:** Visualization development and documentation  
-- **Week 8:** Final report and presentation recording  
-
----
-
-## 9. Reproducibility (Checkpoint 1)
-
-Environment:
-- Python 3.10+
-
-Setup:
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-Run checkpoint pipeline:
-```bash
-PYTHONPATH=src python scripts/run_checkpoint1.py \
-  --input data/sample_listings.csv \
-  --output outputs/checkpoint1
-```
-
-Run tests:
-```bash
-PYTHONPATH=src pytest -q
-```
-
-Minimal outputs for Check-In 1 are written to `outputs/checkpoint1/` (metrics + preliminary plots).
-
-Checkpoint 1 preliminary interpretation (sample data run):
-- Linear baseline: MAE = 15,756, RMSE = 25,438, R² = 0.992.
-- Random forest: MAE = 36,985, RMSE = 53,182, R² = 0.966.
-- At this stage, these numbers are from a small synthetic-style sample (`data/sample_listings.csv`), so they indicate that the pipeline is working, not final model quality.
-- Next step is to evaluate on larger real collected data and analyze residuals by location/price segment to identify where the model fails.
-
----
-
-## 10. Checkpoint 1 Completion Checklist
-
-- [x] Data source candidates are explicitly linked (Zillow, Redfin, MassGIS).
-- [x] Initial dataset is available for reproducible progress (`data/sample_listings.csv`).
-- [x] Data cleaning and feature extraction pipeline is implemented (`src/real_estate_tracker/data_processing.py`).
-- [x] Baseline and tree-based modeling are implemented (`src/real_estate_tracker/modeling.py`).
-- [x] Preliminary visualizations are generated (`outputs/checkpoint1/figures/`).
-- [x] Preliminary metrics are generated (`outputs/checkpoint1/metrics.json`).
-- [x] Tests are included (`tests/`) and automated with GitHub Actions (`.github/workflows/ci.yml`).
-
----
-
-## 11. Checkpoint Demo Runbook
-
-From repository root:
+The fastest way to reproduce our results from scratch:
 
 ```bash
-source .venv/bin/activate
-PYTHONPATH=src python3 -m pytest -q
-PYTHONPATH=src python3 scripts/run_checkpoint1.py --input data/sample_listings.csv --output outputs/checkpoint1
+git clone <this-repo>
+cd RealEstate-Tracker
+make all
 ```
 
-Open generated visuals (macOS):
+`make all` runs the full pipeline end-to-end: creates a virtual environment, installs dependencies, downloads raw data, cleans + enriches it, trains the models, and saves results to `outputs/checkpoint2/`.
+
+If you prefer to run steps individually:
+
 ```bash
-open outputs/checkpoint1/figures/*.png
+make install     # Create venv + install dependencies
+make data        # Download all raw datasets
+make pipeline    # Clean + enrich -> boston_properties_enriched.csv
+make model       # Train models + generate figures
+make test        # Run pytest
 ```
 
-Open summary files:
-```bash
-open outputs/checkpoint1/metrics.json
-open outputs/checkpoint1/run_summary.json
+Run `make help` for a full list of targets.
+
+> **Note on data downloads:** the Boston Property Assessment CSV occasionally returns a 403 from data.boston.gov. If `make data` fails on this file, download it manually from <https://data.boston.gov/dataset/property-assessment> and save it as `data/raw/boston_property_assessment_fy2026.csv`. Then re-run `make pipeline`.
+
+---
+
+## What This Project Does
+
+The residential real estate market suffers from information asymmetry: buyers and investors struggle to determine whether a listing is priced reasonably relative to comparable properties. Existing tools like Zillow's Zestimate are proprietary and don't expose how their estimates are derived.
+
+We built an end-to-end data science pipeline that:
+
+1. Estimates an **expected market price** for each Boston residential property based on observable features
+2. Compares each property's actual assessed value to the model's expectation
+3. Flags properties with the largest **positive or negative residuals** as candidates for relative mispricing
+
+We do not claim to identify a property's "true" value. We identify properties whose assessed value is unusually high or low *given features the model can see*.
+
+---
+
+## Headline Results
+
+Trained on 136,581 Greater Boston residential properties with 16 features.
+
+### 5-fold cross-validation results
+
+| Model | MAE | RMSE | R² | MAPE |
+|---|---|---|---|---|
+| Linear Regression (baseline) | $263,459 ± $929 | $420,700 ± $2,845 | 0.522 ± 0.004 | 31.12% ± 0.13% |
+| **Random Forest (primary)** | **$133,915 ± $1,231** | **$220,750 ± $3,842** | **0.868 ± 0.004** | **16.41% ± 0.21%** |
+
+Random Forest cuts MAE in half compared to the linear baseline and achieves R² = 0.868 — meaning it explains roughly 87% of the variance in Boston residential prices. The very small standard deviations across folds (R² varies by less than 0.5 percentage points) confirm the model's performance is stable and not an artifact of any particular train/test split.
+
+### Median Absolute Percentage Error: 10.79%
+
+Half of the model's predictions fall within ~11% of the actual assessed price — a more representative metric than the mean (MAPE) given the long-tailed price distribution.
+
+### Error breakdown by price tier
+
+The model's error varies substantially across the price range:
+
+| Price Tier | Properties | MAE | MAPE |
+|---|---|---|---|
+| <$500K | 6,417 | $107,899 | **29.8%** |
+| $500K–$1M | 18,524 | $91,150 | **12.8%** ← sweet spot |
+| $1M–$2M | 7,412 | $176,003 | 13.3% |
+| $2M+ | 1,793 | $447,718 | 15.5% |
+
+The model performs best on mid-tier residential properties ($500K–$1M), where MAPE drops to 12.8%. It degrades on both ends: the cheapest tier has the highest **percentage** error (29.8% — a $108K miss on a $400K home is a large fraction of the price), while the luxury tier has the highest **dollar** error ($448K average miss). This is shown visually in `outputs/checkpoint2/figures/error_by_price_tier.png`.
+
+For context: Zillow's Zestimate publishes a median absolute percentage error of roughly 2–7% on actively-listed homes. Our 10.79% is notably higher, mostly due to features we don't have (per-property latitude/longitude, sale history, walk score, school district). See **Limitations** below.
+
+---
+
+## Data
+
+### Sources
+
+| Dataset | Source | Used for |
+|---|---|---|
+| Property Assessment FY2026 | <https://data.boston.gov/dataset/property-assessment> | Primary dataset (price, sqft, beds, baths, year built, etc.) |
+| Census ACS 5-Year (2019) | <https://api.census.gov/> | ZIP-level median income, total population, owner-occupancy |
+| Zillow ZHVI by ZIP | <https://www.zillow.com/research/data/> | ZIP-level home value index + year-over-year market trend |
+
+The assessment data covers all 184,552 taxable parcels in Boston. We filter to the 136,581 records with residential land-use codes (R1, R2, R3, R4, CD, A — single family, 2-family, 3-family, 4+ family, condo, apartment).
+
+### Data collection method
+
+Implemented in `scripts/download_datasets.py` and `scripts/fetch_api_data.py`:
+
+- Direct HTTPS downloads from data.boston.gov and zillowstatic.com via `urllib`
+- Census ACS pulled via the official Census API (no key required)
+- Encoding fallback chain (utf-8 → latin-1 → cp1252) since city CSVs use inconsistent encodings
+- Skip-if-exists logic so re-runs are fast
+
+### Data cleaning
+
+Implemented in `clean_assessment_data` in `src/real_estate_tracker/data_processing.py`. Ten steps:
+
+1. **Schema validation** — fail fast if expected columns are missing
+2. **Whitespace stripping** on column names (Boston exports sometimes have trailing spaces)
+3. **Filter to residential** (LU codes R1–R4, CD, A) → 184,552 → 136,581
+4. **Standardize column names** — handles both FY2024-style (`R_BDRMS`) and FY2026-style (`BED_RMS`) variants
+5. **Numeric coercion** with comma-stripping (e.g., `"822,900"` → 822900)
+6. **Combine bathrooms** = `full_bathrooms + 0.5 × half_bathrooms` (real estate convention)
+7. **ZIP code padding** to 5 digits (catches `2127.0` floats)
+8. **Outlier removal** — drop top/bottom 1% of prices (data errors at zero, idiosyncratic luxury at the top); filter sqft to [200, 15000]
+9. **Missing value imputation** — median for `year_built`, mode for condition codes, 0 for `year_remodeled` (since 0 means *never remodeled*, a real value)
+10. **Deduplication** on Parcel ID
+
+### Enrichment
+
+Implemented in `src/real_estate_tracker/feature_enrichment.py`. Two ZIP-level merges:
+
+- **Census ACS** demographics (income, population, owner-occupancy %, median home value)
+- **Zillow ZHVI** (latest value, year-over-year change %)
+
+Census matched 100% of properties; Zillow matched ~97% (some Boston ZIPs aren't covered by Zillow's index).
+
+---
+
+## Feature Engineering
+
+We use 16 features in three groups:
+
+### Structural (8 features)
+Direct measurements from the assessment data:
+- `sqft`, `lot_sqft` — living area and lot area in square feet
+- `bedrooms`, `bathrooms`, `total_rooms` — room counts
+- `num_floors`, `fireplaces` — building features
+- `year_built` — construction year
+
+### Engineered ratios (6 features)
+Derived in `add_assessment_features`:
+- `sqft_per_room` = layout efficiency proxy (open vs. choppy floor plan)
+- `home_age` = `2026 - year_built` (interpretable transformation)
+- `bath_to_bed_ratio` = luxury indicator (modern builds approach 1.0)
+- `lot_to_living_ratio` = urban-vs-suburban signal (condo: ~1, suburban single-family: 5–20)
+- `is_remodeled` = binary flag (`year_remodeled > 0`)
+- `renovation_gap` = years between original build and most recent remodel
+
+### Neighborhood signal (2 features)
+ZIP-level features merged from Census ACS:
+- `median_household_income`
+- `total_population`
+
+### Features deliberately excluded
+
+`price_per_sqft` was originally a candidate but was removed because it's derived from the target (price) and represents target leakage. With it included, R² rose to 0.998 — clearly not a real signal.
+
+---
+
+## Modeling
+
+### Setup
+
+- **Train/test split**: 75/25, `random_state=42` for reproducibility
+- **Cross-validation**: 5-fold KFold with shuffling, `random_state=42`
+- **Linear Regression** (baseline) — sklearn defaults, no regularization
+- **Random Forest** (primary) — 150 trees, `max_depth=10`, `n_jobs=-1`
+
+We report metrics on both the single 75/25 split *and* 5-fold CV. The CV numbers are the more honest report of model performance; the single-split numbers are kept for comparison.
+
+### Why Random Forest
+
+Three reasons it beats linear regression by 35 R² points:
+
+1. **Non-linear feature relationships** — price doesn't increase linearly with sqft (luxury threshold around 3,000 sqft creates a kink linear can't capture)
+2. **Feature interactions** — RF can branch on `total_population` first, then handle `bathrooms` differently in dense urban ZIPs vs. suburban ones. Linear assumes effects are additive
+3. **Robustness to extreme values** — `lot_to_living_ratio` has extreme values for tiny condos on huge parcels that overflowed linear regression's matmul. RF splits on thresholds, ignoring magnitude
+
+### Random Forest feature importance
+
+Top 5 features by Gini importance, accounting for ~88% of the model's decisions:
+
+| Rank | Feature | Importance |
+|---|---|---|
+| 1 | `total_population` | 30% |
+| 2 | `bathrooms` | 23% |
+| 3 | `sqft` | 19% |
+| 4 | `median_household_income` | 10% |
+| 5 | `sqft_per_room` | 6% |
+
+`total_population` ranking #1 is initially surprising. The reason: with only 34 ZIP codes in our data, `total_population` has only ~34 distinct values across 136K rows — it's effectively a categorical encoding of which Boston neighborhood a property is in. The Random Forest is using it as a proxy for the lat/long features we don't have. We expect its importance to drop substantially if per-property location features are added.
+
+---
+
+## Visualizations
+
+All figures are in `outputs/checkpoint2/figures/`. Generated automatically by `make model`.
+
+| File | What it shows |
+|---|---|
+| `price_distribution.png` | Histogram of assessed prices — strong right skew, median $747K, long luxury tail |
+| `price_vs_sqft.png` | Scatter — high price variance at any given sqft, motivating ZIP-level features |
+| `predicted_vs_actual.png` | RF predictions on the test set vs. actual price; tight diagonal cluster low/mid, fan-out at $3M+ |
+| `feature_importance.png` | Horizontal bar chart of RF Gini importances |
+| `residual_distribution.png` | Histogram of percentage residuals — bell-shaped, centered near 0, slight right skew |
+| `residuals_vs_predicted.png` | Standard diagnostic plot — error variance grows with predicted price (heteroscedasticity) |
+| `error_by_price_tier.png` | Dual-axis bar chart of MAE ($) and MAPE (%) per price tier — the "where does the model fail" plot |
+
+---
+
+## Limitations and Failure Cases
+
+We are aware of the following limitations and would address them in future work:
+
+### 1. No per-property location features
+
+Our spatial signal is aggregated at the ZIP-code level (Census income, population, Zillow ZHVI). Per-property features like exact latitude/longitude, transit proximity, walkability, and school zones would substantially improve performance — but require integrating a parcel geocoding step we did not implement. This is the single largest factor explaining the gap between our 10.79% median APE and Zillow's published 2–7%.
+
+### 2. Heteroscedastic error by price tier
+
+The model's percentage error is highest on the cheapest properties (29.8% MAPE for <$500K) and dollar error is highest on luxury homes ($448K MAE for $2M+). This is visible in both `residuals_vs_predicted.png` and `error_by_price_tier.png`. Possible causes:
+
+- Cheap properties include distressed/atypical homes that don't fit the standard model
+- Luxury properties have idiosyncratic features (custom finishes, views, historic significance) that we don't capture
+- Most training data is mid-tier, so the model is best in that regime
+
+### 3. We model assessed value, not market value
+
+The target variable is the city's official tax-assessed value — a proxy for market value but not the same thing. Massachusetts assessed values typically run 80–95% of true market value and lag actual transactions by months to a year. A version of this project trained on transaction prices (e.g., from Redfin or MLS) would be more directly useful for buy/sell decisions but requires data we don't have access to.
+
+### 4. Single-snapshot data
+
+Our enriched dataset is a fiscal-year 2026 snapshot. The model has no concept of price trajectories within a property, no time-series component, and no way to identify recently sold or recently renovated properties beyond the (often stale) `year_remodeled` field.
+
+### 5. Census data is from 2019
+
+The Census API endpoints for ACS years 2020–2022 returned HTTP 400 errors during data collection (likely due to ZCTA geography changes after 2020 requiring different request parameters). We fell back to the 2019 5-year ACS, which is the most recent that worked without an API key. Demographics shift slowly so this is acceptable, but a current-year version would be preferable.
+
+### 6. Linear regression numerical issues
+
+Linear regression triggers matmul overflow warnings during prediction due to extreme values in some engineered features (notably `lot_to_living_ratio` for tiny condos on large parcels). The numeric output is still produced, but the linear baseline would be cleaner with feature scaling. Random Forest is unaffected since it splits on thresholds rather than computing dot products.
+
+### 7. Assumption of independent observations
+
+Our train/test split treats each property as an independent draw. In reality, neighbors influence each other through comps and shared neighborhood factors. A more rigorous evaluation would split by ZIP or by date.
+
+---
+
+## Repository Structure
+
 ```
+RealEstate-Tracker/
+├── data/
+│   ├── raw/                          # Downloaded datasets (gitignored)
+│   ├── processed/                    # Cleaned + enriched CSVs (gitignored)
+│   ├── sample_listings.csv           # 30-row sample for CI
+│   └── README.md                     # Column dictionary
+├── outputs/
+│   └── checkpoint2/                  # Final model results
+│       ├── metrics.json              # Single-split + CV metrics
+│       ├── residuals.csv             # Per-property residuals
+│       ├── run_summary.json          # Full run metadata
+│       └── figures/                  # 7 PNG visualizations
+├── scripts/
+│   ├── download_datasets.py          # Download Assessment + Zillow CSVs
+│   ├── fetch_api_data.py             # Fetch Census ACS via API
+│   ├── run_pipeline.py               # Clean + enrich → enriched CSV
+│   └── run_model.py                  # Train models + save figures + metrics
+├── src/real_estate_tracker/
+│   ├── data_processing.py            # Cleaning + feature engineering
+│   ├── feature_enrichment.py         # Census + Zillow merges
+│   ├── modeling.py                   # train_and_evaluate, cross-validation
+│   └── visualization.py              # All plotting functions
+├── tests/
+│   ├── test_assessment_processing.py # Cleaning + features
+│   ├── test_data_processing.py       # Sample data path
+│   ├── test_feature_enrichment.py    # Haversine, Census, Zillow merges
+│   └── test_pipeline_smoke.py        # End-to-end smoke test
+├── .github/workflows/ci.yml          # GitHub Actions test runner
+├── Makefile                          # Build automation
+├── requirements.txt
+└── README.md                         # This file
+```
+
+---
+
+## Testing
+
+We use `pytest` with 24 tests covering:
+
+- Assessment data cleaning (residential filter, column renaming, bathroom combination, deduplication)
+- Feature engineering (price_per_sqft, home_age, is_remodeled, etc.)
+- Haversine distance (referenced for future spatial work)
+- Census demographics merge
+- Zillow ZHVI merge
+- End-to-end smoke test on the sample dataset
+
+Run them with:
+
+```bash
+make test
+```
+
+GitHub Actions runs the test suite automatically on every push and pull request — see `.github/workflows/ci.yml`.
+
+---
+
+## Environment
+
+Tested on:
+
+- Python 3.9 and 3.11
+- macOS and Ubuntu (GitHub Actions)
+- Virtual environment via `python -m venv .venv`
+
+Dependencies (`requirements.txt`):
+- `pandas >= 2.2.0`
+- `numpy >= 1.26.0`
+- `scikit-learn >= 1.4.0`
+- `matplotlib >= 3.8.0`
+- `pytest >= 8.0.0`
+- `requests >= 2.31.0`
+
+---
+
+## Authors
+
+Built for CS 506 (Spring 2026, Boston University) by:
+
+- *[Eric Tang]*
+- *[Teammate 2]*
+- *[Teammate 3]*
+- *[Teammate 4 — if applicable]*
+- *[Teammate 5 — if applicable]*
+
+Replace the placeholder names above with actual teammates before final submission.
+
+---
+
+## License
+
+This is a student project for CS 506. Code is for educational use. Data is from publicly available sources (City of Boston Open Data, US Census, Zillow Research) and remains subject to their respective terms of use.

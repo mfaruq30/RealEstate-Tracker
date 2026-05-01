@@ -136,48 +136,65 @@ def save_residuals_vs_predicted_plot(
     plt.close(fig)
     return path
 
-
-def save_interaction_pdp_plot(
-    model,
-    x: pd.DataFrame,
-    feature_pair: tuple[str, str],
+def save_error_by_price_tier_plot(
+    tier_breakdown: list[dict],
     output_dir: str,
-    sample_size: int = 5000,
-    random_state: int = 42,
 ) -> str:
-    """Save a 2D partial dependence plot showing interaction between two features.
+    """Save a dual-axis bar chart showing MAE ($) and MAPE (%) by price tier.
 
-    A flat tilted surface = no interaction (effects are additive).
-    A curved or twisted surface = the two features interact (the effect of one
-    depends on the value of the other).
+    Reveals heteroscedasticity in error: the model performs best on mid-tier
+    properties and degrades on both cheap (high MAPE) and luxury (high MAE) homes.
 
-    Subsamples the data for speed — 5K rows is plenty for a smooth PDP.
+    Expects each dict in tier_breakdown to have keys:
+        tier, n_properties, mae, mape_pct
     """
-    from sklearn.inspection import PartialDependenceDisplay
-
     os.makedirs(output_dir, exist_ok=True)
 
-    # Subsample for speed; PDP is expensive on the full dataset
-    if len(x) > sample_size:
-        x_sample = x.sample(n=sample_size, random_state=random_state)
-    else:
-        x_sample = x
+    tiers = [b["tier"] for b in tier_breakdown]
+    maes = [b["mae"] for b in tier_breakdown]
+    mapes = [b["mape_pct"] for b in tier_breakdown]
+    counts = [b["n_properties"] for b in tier_breakdown]
 
-    feat1, feat2 = feature_pair
+    fig, ax1 = plt.subplots(figsize=(9, 5))
+    bar_width = 0.35
+    x = range(len(tiers))
+    x_left = [i - bar_width / 2 for i in x]
+    x_right = [i + bar_width / 2 for i in x]
 
-    fig, ax = plt.subplots(figsize=(8, 6))
-    PartialDependenceDisplay.from_estimator(
-        model,
-        x_sample,
-        features=[(feat1, feat2)],
-        kind="average",
-        ax=ax,
-    )
-    ax.set_title(f"Partial Dependence: {feat1} × {feat2}\n(predicted price, holding other features at average)")
+    # Left y-axis: MAE in dollars
+    bars1 = ax1.bar(x_left, maes, bar_width, label="MAE ($)", color="#4C72B0")
+    ax1.set_xlabel("Price Tier (with property count)")
+    ax1.set_ylabel("MAE (USD)", color="#4C72B0")
+    ax1.tick_params(axis="y", labelcolor="#4C72B0")
+    ax1.set_xticks(list(x))
+    ax1.set_xticklabels([f"{t}\n(n={c:,})" for t, c in zip(tiers, counts)])
+
+    # Right y-axis: MAPE in percent
+    ax2 = ax1.twinx()
+    bars2 = ax2.bar(x_right, mapes, bar_width, label="MAPE (%)", color="#DD8452")
+    ax2.set_ylabel("MAPE (%)", color="#DD8452")
+    ax2.tick_params(axis="y", labelcolor="#DD8452")
+
+    # Annotate bars with values
+    for bar, val in zip(bars1, maes):
+        ax1.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"${val/1000:.0f}K",
+            ha="center", va="bottom", fontsize=9, color="#4C72B0",
+        )
+    for bar, val in zip(bars2, mapes):
+        ax2.text(
+            bar.get_x() + bar.get_width() / 2,
+            bar.get_height(),
+            f"{val:.1f}%",
+            ha="center", va="bottom", fontsize=9, color="#DD8452",
+        )
+
+    ax1.set_title("Random Forest Error by Price Tier\n(MAE in $ vs MAPE in %)")
     fig.tight_layout()
 
-    safe_name = f"pdp_{feat1}_x_{feat2}".replace("/", "_")
-    path = os.path.join(output_dir, f"{safe_name}.png")
+    path = os.path.join(output_dir, "error_by_price_tier.png")
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path

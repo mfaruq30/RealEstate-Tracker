@@ -31,10 +31,15 @@ def train_and_evaluate(x: pd.DataFrame, y: pd.Series, random_state: int = 42) ->
         model.fit(x_train, y_train)
         y_pred = model.predict(x_test)
         predictions[name] = y_pred
+        # Percentage errors — better than MAE when prices span a wide range ($100K to $5M)
+        # Avoid divide-by-zero by clipping y_test at $1
+        ape = np.abs(y_pred - y_test.values) / np.clip(y_test.values, 1, None) * 100
         metrics[name] = {
             "mae": float(mean_absolute_error(y_test, y_pred)),
             "rmse": float(np.sqrt(mean_squared_error(y_test, y_pred))),
             "r2": float(r2_score(y_test, y_pred)),
+            "mape": float(np.mean(ape)),
+            "median_ape": float(np.median(ape)),
         }
 
     return {
@@ -94,20 +99,29 @@ def cross_validate_models(
         r2 = cross_val_score(model, x, y, cv=kf, scoring="r2")
         neg_mae = cross_val_score(model, x, y, cv=kf, scoring="neg_mean_absolute_error")
         neg_mse = cross_val_score(model, x, y, cv=kf, scoring="neg_mean_squared_error")
+        # MAPE wasn't in sklearn's default scoring list until late versions; compute manually per fold
+        neg_mape = cross_val_score(
+            model, x, y, cv=kf,
+            scoring="neg_mean_absolute_percentage_error",
+        )
 
         mae = -neg_mae
         rmse = np.sqrt(-neg_mse)
+        mape = -neg_mape * 100  # convert from fraction to percentage
 
         results[name] = {
             "r2_scores": r2.tolist(),
             "mae_scores": mae.tolist(),
             "rmse_scores": rmse.tolist(),
+            "mape_scores": mape.tolist(),
             "r2_mean": float(r2.mean()),
             "r2_std": float(r2.std()),
             "mae_mean": float(mae.mean()),
             "mae_std": float(mae.std()),
             "rmse_mean": float(rmse.mean()),
             "rmse_std": float(rmse.std()),
+            "mape_mean": float(mape.mean()),
+            "mape_std": float(mape.std()),
         }
 
     return results

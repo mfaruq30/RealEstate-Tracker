@@ -5,11 +5,9 @@ Usage:
 
     Environment variables (optional):
         CENSUS_API_KEY  — free key from https://api.census.gov/data/key_signup.html
-        FRED_API_KEY    — free key from https://fred.stlouisfed.org/docs/api/fred/
 
 APIs used:
     1. Census ACS 5-Year — median income, home values for MA ZIP codes
-    2. FRED — 30-year fixed mortgage rate time series
 """
 
 from __future__ import annotations
@@ -151,62 +149,6 @@ def fetch_census_acs(api_key: str | None, output_dir: Path) -> None:
     print(f"  ({boston_count} are in the Greater Boston area)")
 
 
-def fetch_fred_mortgage_rates(api_key: str | None, output_dir: Path) -> None:
-    """Fetch FRED 30-Year Fixed Rate Mortgage Average (MORTGAGE30US).
-
-    Falls back to a direct CSV download if no API key is set.
-    """
-    dest = output_dir / "fred_mortgage_rates.csv"
-    if dest.exists() and dest.stat().st_size > 0:
-        print(f"  {dest.name} already exists, skipping.")
-        return
-
-    if api_key:
-        url = (
-            f"https://api.stlouisfed.org/fred/series/observations"
-            f"?series_id=MORTGAGE30US"
-            f"&api_key={api_key}"
-            f"&file_type=json"
-            f"&observation_start=2000-01-01"
-        )
-        print("  Fetching FRED mortgage rate data via API...")
-        try:
-            data = fetch_json(url)
-            observations = data.get("observations", [])
-
-            with open(dest, "w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(["date", "mortgage_rate_30yr"])
-                for obs in observations:
-                    if obs["value"] != ".":
-                        writer.writerow([obs["date"], obs["value"]])
-
-            print(f"  Saved {len(observations)} observations to {dest.name}")
-            return
-        except (HTTPError, URLError) as exc:
-            print(f"  API request failed ({exc}), trying CSV fallback...")
-
-    # Fallback: direct CSV download from FRED (no API key needed)
-    csv_url = (
-        "https://fred.stlouisfed.org/graph/fredgraph.csv"
-        "?id=MORTGAGE30US"
-        "&cosd=2000-01-01"
-    )
-    print("  Downloading FRED mortgage rate CSV (no API key)...")
-    try:
-        req = Request(csv_url, headers={"User-Agent": USER_AGENT})
-        with urlopen(req, timeout=120) as resp:
-            content = resp.read().decode("utf-8")
-            with open(dest, "w", encoding="utf-8") as f:
-                f.write(content)
-        line_count = content.count("\n")
-        print(f"  Saved ~{line_count} rows to {dest.name}")
-    except Exception as exc:
-        print(f"  ERROR: Could not download FRED data: {exc}")
-        print(f"  This is optional data — the pipeline will work without it.")
-        print(f"  TIP: Get a free API key at https://fred.stlouisfed.org/docs/api/fred/")
-
-
 def main() -> None:
     parser = argparse.ArgumentParser(description="Fetch API data for Real Estate Tracker.")
     parser.add_argument(
@@ -220,7 +162,6 @@ def main() -> None:
     output_dir.mkdir(parents=True, exist_ok=True)
 
     census_key = os.environ.get("CENSUS_API_KEY")
-    fred_key = os.environ.get("FRED_API_KEY")
 
     print(f"Fetching API data to: {output_dir}\n")
 
@@ -230,10 +171,6 @@ def main() -> None:
 
     print("[Census ACS 5-Year Data]")
     fetch_census_acs(census_key, output_dir)
-    print()
-
-    print("[FRED 30-Year Mortgage Rate]")
-    fetch_fred_mortgage_rates(fred_key, output_dir)
     print()
 
     print("API data fetch complete.")
