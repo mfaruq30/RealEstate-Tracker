@@ -65,7 +65,7 @@ def main() -> None:
     print("=" * 60)
     print("STEP 1: Loading enriched dataset")
     print("=" * 60)
-    df = pd.read_csv(input_path)
+    df = pd.read_csv(input_path, low_memory=False)
     print(f"  Loaded: {len(df):,} rows x {len(df.columns)} columns")
 
     # --- Step 2: Select model columns ---
@@ -175,7 +175,8 @@ def main() -> None:
         residuals_pct=residuals_df["residual_pct_rf"],
         output_dir=str(figure_dir),
     )
-    print(f"  Saved residual distribution: {residual_dist_path}")
+    print(f"  \nSaved figures:")
+    print(f"    - Saved residual distribution: {residual_dist_path}")
     saved_figures.append(residual_dist_path)
 
     residuals_vs_pred_path = save_residuals_vs_predicted_plot(
@@ -183,7 +184,7 @@ def main() -> None:
         residuals=residuals_df["residual_rf"],
         output_dir=str(figure_dir),
     )
-    print(f"  Saved residuals vs predicted: {residuals_vs_pred_path}")
+    print(f"    - Saved residuals vs predicted: {residuals_vs_pred_path}")
     saved_figures.append(residuals_vs_pred_path)
 
     # Bar chart: MAE / MAPE by price tier — visualizes the table from STEP 4c
@@ -191,7 +192,7 @@ def main() -> None:
         tier_breakdown=tier_breakdown,
         output_dir=str(figure_dir),
     )
-    print(f"  Saved error-by-tier plot: {tier_plot_path}")
+    print(f"    - Saved error-by-tier plot: {tier_plot_path}")
     saved_figures.append(tier_plot_path)
 
     residuals_path = output_dir / "residuals.csv"

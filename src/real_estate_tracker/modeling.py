@@ -10,12 +10,8 @@ from sklearn.linear_model import LinearRegression
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import train_test_split
 
-
-def train_and_evaluate(x: pd.DataFrame, y: pd.Series, random_state: int = 42) -> dict:
-    """Train baseline and tree models, then return metrics and predictions."""
-    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=random_state)
-
-    models = {
+def make_models(random_state: int) -> dict: # helper
+    return {
         "linear_regression": LinearRegression(),
         "random_forest": RandomForestRegressor(
             n_estimators=150,
@@ -23,6 +19,12 @@ def train_and_evaluate(x: pd.DataFrame, y: pd.Series, random_state: int = 42) ->
             random_state=random_state,
         ),
     }
+
+def train_and_evaluate(x: pd.DataFrame, y: pd.Series, random_state: int = 42) -> dict:
+    """Train baseline and tree models, then return metrics and predictions."""
+    x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.25, random_state=random_state)
+
+    models = make_models(random_state)
 
     metrics: dict[str, dict] = {}
     predictions: dict[str, np.ndarray] = {}
@@ -83,15 +85,7 @@ def cross_validate_models(
 
     kf = KFold(n_splits=n_folds, shuffle=True, random_state=random_state)
 
-    models = {
-        "linear_regression": LinearRegression(),
-        "random_forest": RandomForestRegressor(
-            n_estimators=150,
-            max_depth=10,
-            random_state=random_state,
-            n_jobs=-1,
-        ),
-    }
+    models = make_models(random_state)
 
     results: dict[str, dict] = {}
     for name, model in models.items():
