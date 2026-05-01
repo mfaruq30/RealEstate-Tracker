@@ -1,7 +1,10 @@
 # Real Estate Value Analyzer — Makefile
 # Run `make help` to see available targets.
 
-PYTHON ?= python3
+# Use the venv's Python if it exists, otherwise system python3
+VENV_PY := .venv/bin/python
+PYTHON := $(shell [ -x $(VENV_PY) ] && echo $(VENV_PY) || echo python3)
+
 PYTHONPATH := src
 
 .PHONY: help install data pipeline model test all clean
@@ -17,10 +20,11 @@ help:
 	@echo "  make clean     - Remove generated outputs (keeps raw data)"
 
 install:
-	$(PYTHON) -m venv .venv
-	. .venv/bin/activate && pip install --upgrade pip && pip install -r requirements.txt
+	python3 -m venv .venv
+	.venv/bin/pip install --upgrade pip
+	.venv/bin/pip install -r requirements.txt
 	@echo ""
-	@echo "Installed. Activate the venv with: source .venv/bin/activate"
+	@echo "Installed. To use the venv interactively, run: source .venv/bin/activate"
 
 data:
 	$(PYTHON) scripts/download_datasets.py
