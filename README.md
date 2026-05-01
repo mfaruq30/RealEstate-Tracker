@@ -3,7 +3,7 @@
 **CS 506 Final Project** — A residual-based mispricing analyzer for Greater Boston residential real estate.
 
 📺 **Presentation video:** *[YouTube link to be added]*
-🎬 **Build & run demo:** *[YouTube link to be added]*
+🎬 **Build & run demo:** *[https://youtu.be/oJ6uE5qAH08]*
 
 ---
 
@@ -339,10 +339,10 @@ Dependencies (`requirements.txt`):
 Built for CS 506 (Spring 2026, Boston University) by:
 
 - *[Eric Tang]*
-- *[Teammate 2]*
-- *[Teammate 3]*
-- *[Teammate 4 — if applicable]*
-- *[Teammate 5 — if applicable]*
+- *[Mirza Faruq]*
+- *[Adi Almukhamet]*
+- *[Mohammed Attia]*
+- *[Clemens Li]*
 
 Replace the placeholder names above with actual teammates before final submission.
 
