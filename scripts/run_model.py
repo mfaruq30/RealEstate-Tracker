@@ -31,6 +31,7 @@ from real_estate_tracker.visualization import (
     save_feature_importance_plot,
     save_residual_distribution_plot,
     save_residuals_vs_predicted_plot,
+    save_interaction_pdp_plot,
 )
 
 
@@ -161,6 +162,17 @@ def main() -> None:
     )
     print(f"  Saved residuals vs predicted: {residuals_vs_pred_path}")
     saved_figures.append(residuals_vs_pred_path)
+
+    # Partial dependence plot — visualizes feature interaction
+    print("  Computing partial dependence (1-2 min)...")
+    pdp_path = save_interaction_pdp_plot(
+        model=result["models"]["random_forest"],
+        x=x,
+        feature_pair=("median_household_income", "bathrooms"),
+        output_dir=str(figure_dir),
+    )
+    print(f"  Saved partial dependence plot: {pdp_path}")
+    saved_figures.append(pdp_path)
 
     residuals_path = output_dir / "residuals.csv"
     residuals_df.to_csv(residuals_path, index=False)

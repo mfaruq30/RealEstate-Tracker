@@ -135,3 +135,49 @@ def save_residuals_vs_predicted_plot(
     fig.savefig(path, dpi=150)
     plt.close(fig)
     return path
+
+
+def save_interaction_pdp_plot(
+    model,
+    x: pd.DataFrame,
+    feature_pair: tuple[str, str],
+    output_dir: str,
+    sample_size: int = 5000,
+    random_state: int = 42,
+) -> str:
+    """Save a 2D partial dependence plot showing interaction between two features.
+
+    A flat tilted surface = no interaction (effects are additive).
+    A curved or twisted surface = the two features interact (the effect of one
+    depends on the value of the other).
+
+    Subsamples the data for speed — 5K rows is plenty for a smooth PDP.
+    """
+    from sklearn.inspection import PartialDependenceDisplay
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Subsample for speed; PDP is expensive on the full dataset
+    if len(x) > sample_size:
+        x_sample = x.sample(n=sample_size, random_state=random_state)
+    else:
+        x_sample = x
+
+    feat1, feat2 = feature_pair
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+    PartialDependenceDisplay.from_estimator(
+        model,
+        x_sample,
+        features=[(feat1, feat2)],
+        kind="average",
+        ax=ax,
+    )
+    ax.set_title(f"Partial Dependence: {feat1} × {feat2}\n(predicted price, holding other features at average)")
+    fig.tight_layout()
+
+    safe_name = f"pdp_{feat1}_x_{feat2}".replace("/", "_")
+    path = os.path.join(output_dir, f"{safe_name}.png")
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
