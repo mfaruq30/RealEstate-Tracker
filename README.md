@@ -204,17 +204,63 @@ Top 5 features by Gini importance, accounting for ~88% of the model's decisions:
 
 ## Visualizations
 
-All figures are in `outputs/checkpoint2/figures/`. Generated automatically by `make model`.
+All figures are in `outputs/checkpoint2/figures/` and are regenerated automatically by `make model`.
 
-| File | What it shows |
-|---|---|
-| `price_distribution.png` | Histogram of assessed prices — strong right skew, median $747K, long luxury tail |
-| `price_vs_sqft.png` | Scatter — high price variance at any given sqft, motivating ZIP-level features |
-| `predicted_vs_actual.png` | RF predictions on the test set vs. actual price; tight diagonal cluster low/mid, fan-out at $3M+ |
-| `feature_importance.png` | Horizontal bar chart of RF Gini importances |
-| `residual_distribution.png` | Histogram of percentage residuals — bell-shaped, centered near 0, slight right skew |
-| `residuals_vs_predicted.png` | Standard diagnostic plot — error variance grows with predicted price (heteroscedasticity) |
-| `error_by_price_tier.png` | Dual-axis bar chart of MAE ($) and MAPE (%) per price tier — the "where does the model fail" plot |
+### Predicted vs Actual Price (Random Forest)
+
+![Predicted vs Actual](outputs/checkpoint2/figures/predicted_vs_actual.png)
+
+Each point is one test-set property, where the x-axis is the actual assessed value and the y-axis is the model’s predicted value. The dashed diagonal line represents perfect prediction, so points closer to this line mean the model predicted more accurately.
+
+The cluster is tight along the diagonal from about $200K to $2M, showing that the Random Forest performs well for most normal residential properties. Above $3M, the points spread out more because luxury homes are rarer in the training data and often have unique features that are not captured by our dataset. Headline metrics: R² = 0.868, MAE = $134K, Median APE = 10.79%.
+
+### Random Forest Feature Importance
+
+![Feature Importance](outputs/checkpoint2/figures/feature_importance.png)
+
+This chart shows which features the Random Forest used most often to make predictions. Higher importance means the feature helped the model split the data and reduce prediction error more often.
+
+The top 5 features account for about 88% of the model's decisions. `bathrooms`, `sqft`, and `median_household_income` are intuitive price drivers because larger homes, more bathrooms, and wealthier areas are usually associated with higher prices. `total_population` ranking #1 is structural: with only 34 ZIP codes in our dataset, this Census feature has only about 34 distinct values and effectively acts as a rough neighborhood indicator. Since we do not have per-property latitude and longitude, the model uses ZIP-level population as a proxy for location.
+
+### Error by Price Tier (MAE in $ vs MAPE in %)
+
+![Error by Price Tier](outputs/checkpoint2/figures/error_by_price_tier.png)
+
+This chart compares model error across different price ranges using two metrics. MAE measures the average dollar error, while MAPE measures the average percentage error relative to the home’s value.
+
+The model's error pattern flips depending on the metric. Cheap properties have the lowest dollar error, about $108K MAE, but the highest percentage error, about 29.8% MAPE, because a $108K miss is a large fraction of a $400K home. The $500K–$1M tier is the sweet spot, with the lowest percentage error and relatively low dollar error. Luxury properties have the largest dollar errors, about $448K MAE on $2M+ homes, because expensive homes vary more in features like finishes, views, and location quality. Overall, the model is most reliable in the mid-tier and less reliable at the extremes.
+
+### Residual Distribution
+
+![Residual Distribution](outputs/checkpoint2/figures/residual_distribution.png)
+
+This plot shows the distribution of residuals, or prediction errors, as a percentage of actual price. A residual near zero means the prediction was close to the actual assessed value.
+
+The distribution is roughly bell-shaped and centered near 0, which suggests that the model is not heavily biased toward always overpredicting or always underpredicting. The slight right skew is important for this project because large positive residuals mean the model predicted a higher value than the actual assessed value. These are the properties that could be candidates for relative underpricing. The visible spike at +100% is a clipping artifact; raw residuals extend further into both tails.
+
+### Residuals vs Predicted Price
+
+![Residuals vs Predicted](outputs/checkpoint2/figures/residuals_vs_predicted.png)
+
+This is a standard regression diagnostic plot. The x-axis shows the predicted price, and the y-axis shows the percentage residual.
+
+The visible funnel shape shows that error variance increases as predicted price grows. This pattern is called heteroscedasticity, meaning the model’s errors are not equally spread across all price levels. In practical terms, the model is more consistent for lower and mid-priced homes, but less predictable for expensive homes. This is one reason Random Forest outperforms linear regression here, because linear regression assumes more constant error variance and a simpler relationship between features and price.
+
+### Listing Price Distribution
+
+![Price Distribution](outputs/checkpoint2/figures/price_distribution.png)
+
+This histogram shows the overall distribution of assessed property values in the dataset. Most homes are concentrated around the lower and middle price ranges, while a smaller number of expensive properties create a long right tail.
+
+The median assessed value is about $747K, but the distribution extends to around $5M because of luxury properties. This skew is important because dollar-based metrics like MAE can be heavily influenced by expensive homes. That is why we report both dollar metrics, such as MAE, and percentage metrics, such as MAPE, to evaluate the model more fairly across the full price range.
+
+### Price vs Square Footage
+
+![Price vs Square Footage](outputs/checkpoint2/figures/price_vs_sqft.png)
+
+This scatter plot compares property price against square footage. Each point represents one property.
+
+Although there is a general upward relationship, the plot shows extreme variance in price at the same square footage. For example, a 2,000 sqft property can be worth $400K or several million dollars depending on its neighborhood and other property characteristics. This shows why square footage alone is not enough to predict price. It also motivates our use of ZIP-level Census and Zillow features, because location-related information is necessary to explain why similar-sized homes can have very different values. The visible $5M ceiling comes from outlier clipping during preprocessing.per price tier — the "where does the model fail" plot |
 
 ---
 
