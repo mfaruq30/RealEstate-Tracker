@@ -3,7 +3,7 @@
 **CS 506 Final Project** — A residual-based mispricing analyzer for Greater Boston residential real estate.
 
 📺 **Presentation video:** *[YouTube link to be added]*
-🎬 **Build & run demo:** *[https://youtu.be/oJ6uE5qAH08]*
+🎬 **Build & run demo:** *[https://youtu.be/hH0iqYcLV14]*
 
 ---
 
