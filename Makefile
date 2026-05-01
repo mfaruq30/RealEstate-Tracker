@@ -3,7 +3,7 @@
 
 # Use the venv's Python if it exists, otherwise system python3
 VENV_PY := .venv/bin/python
-PYTHON := $(shell [ -x $(VENV_PY) ] && echo $(VENV_PY) || echo python3)
+PYTHON = $(shell [ -x $(VENV_PY) ] && echo $(VENV_PY) || echo python3)
 
 PYTHONPATH := src
 
