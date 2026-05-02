@@ -2,8 +2,8 @@
 
 **CS 506 Final Project** — A residual-based mispricing analyzer for Greater Boston residential real estate.
 
-📺 **Presentation video:** *[YouTube link to be added]*
-🎬 **Build & run demo:** *[https://youtu.be/oJ6uE5qAH08]*
+📺 **Presentation video:** *[https://youtu.be/FeclCWGZ2S4]*
+🎬 **Build & run demo:** *[https://youtu.be/hH0iqYcLV14]*
 
 ---
 
@@ -64,7 +64,7 @@ Random Forest cuts MAE in half compared to the linear baseline and achieves R² 
 
 ### Median Absolute Percentage Error: 10.79%
 
-Half of the model's predictions fall within ~11% of the actual assessed price, making MAPE a more representative metric than the mean (MAE) given the long-tailed price distribution.
+Half of the model's predictions fall within ~11% of the actual assessed price — a more representative metric than the mean (MAPE) given the long-tailed price distribution.
 
 ### Error breakdown by price tier
 
@@ -75,7 +75,7 @@ The model's error varies substantially across the price range:
 | <$500K | 6,417 | $107,899 | **29.8%** |
 | $500K–$1M | 18,524 | $91,150 | **12.8%** ← sweet spot |
 | $1M–$2M | 7,412 | $176,003 | 13.3% |
-| $2M+ | 1,793 | $447,718 | 15.5% 
+| $2M+ | 1,793 | $447,718 | 15.5% |
 
 The model performs best on mid-tier residential properties ($500K–$1M), where MAPE drops to 12.8%. It degrades on both ends: the cheapest tier has the highest **percentage** error (29.8% — a $108K miss on a $400K home is a large fraction of the price), while the luxury tier has the highest **dollar** error ($448K average miss). This is shown visually in `outputs/checkpoint2/figures/error_by_price_tier.png`.
 
@@ -155,10 +155,6 @@ ZIP-level features merged from Census ACS:
 - `median_household_income`
 - `total_population`
 
-### Features deliberately excluded
-
-`price_per_sqft` was originally a candidate but was removed because it's derived from the target (price) and represents target leakage. With it included, R² rose to 0.998 — clearly not a real signal.
-
 ---
 
 ## Modeling
@@ -198,17 +194,63 @@ Top 5 features by Gini importance, accounting for ~88% of the model's decisions:
 
 ## Visualizations
 
-All figures are in `outputs/checkpoint2/figures/`. Generated automatically by `make model`.
+All figures are in `outputs/checkpoint2/figures/` and are regenerated automatically by `make model`.
 
-| File | What it shows |
-|---|---|
-| `price_distribution.png` | Histogram of assessed prices — strong right skew, median $747K, long luxury tail |
-| `price_vs_sqft.png` | Scatter — high price variance at any given sqft, motivating ZIP-level features |
-| `predicted_vs_actual.png` | RF predictions on the test set vs. actual price; tight diagonal cluster low/mid, fan-out at $3M+ |
-| `feature_importance.png` | Horizontal bar chart of RF Gini importances |
-| `residual_distribution.png` | Histogram of percentage residuals — bell-shaped, centered near 0, slight right skew |
-| `residuals_vs_predicted.png` | Standard diagnostic plot — error variance grows with predicted price (heteroscedasticity) |
-| `error_by_price_tier.png` | Dual-axis bar chart of MAE ($) and MAPE (%) per price tier — the "where does the model fail" plot |
+### Predicted vs Actual Price (Random Forest)
+
+![Predicted vs Actual](outputs/checkpoint2/figures/predicted_vs_actual.png)
+
+Each point is one test-set property, where the x-axis is the actual assessed value and the y-axis is the model’s predicted value. The dashed diagonal line represents perfect prediction, so points closer to this line mean the model predicted more accurately.
+
+The cluster is tight along the diagonal from about $200K to $2M, showing that the Random Forest performs well for most normal residential properties. Above $3M, the points spread out more because luxury homes are rarer in the training data and often have unique features that are not captured by our dataset. Headline metrics: R² = 0.868, MAE = $134K, Median APE = 10.79%.
+
+### Random Forest Feature Importance
+
+![Feature Importance](outputs/checkpoint2/figures/feature_importance.png)
+
+This chart shows which features the Random Forest used most often to make predictions. Higher importance means the feature helped the model split the data and reduce prediction error more often.
+
+The top 5 features account for about 88% of the model's decisions. `bathrooms`, `sqft`, and `median_household_income` are intuitive price drivers because larger homes, more bathrooms, and wealthier areas are usually associated with higher prices. `total_population` ranking #1 is structural: with only 34 ZIP codes in our dataset, this Census feature has only about 34 distinct values and effectively acts as a rough neighborhood indicator. Since we do not have per-property latitude and longitude, the model uses ZIP-level population as a proxy for location.
+
+### Error by Price Tier (MAE in $ vs MAPE in %)
+
+![Error by Price Tier](outputs/checkpoint2/figures/error_by_price_tier.png)
+
+This chart compares model error across different price ranges using two metrics. MAE measures the average dollar error, while MAPE measures the average percentage error relative to the home’s value.
+
+The model's error pattern flips depending on the metric. Cheap properties have the lowest dollar error, about $108K MAE, but the highest percentage error, about 29.8% MAPE, because a $108K miss is a large fraction of a $400K home. The $500K–$1M tier is the sweet spot, with the lowest percentage error and relatively low dollar error. Luxury properties have the largest dollar errors, about $448K MAE on $2M+ homes, because expensive homes vary more in features like finishes, views, and location quality. Overall, the model is most reliable in the mid-tier and less reliable at the extremes.
+
+### Residual Distribution
+
+![Residual Distribution](outputs/checkpoint2/figures/residual_distribution.png)
+
+This plot shows the distribution of residuals, or prediction errors, as a percentage of actual price. A residual near zero means the prediction was close to the actual assessed value.
+
+The distribution is roughly bell-shaped and centered near 0, which suggests that the model is not heavily biased toward always overpredicting or always underpredicting. The slight right skew is important for this project because large positive residuals mean the model predicted a higher value than the actual assessed value. These are the properties that could be candidates for relative underpricing. The visible spike at +100% is a clipping artifact; raw residuals extend further into both tails.
+
+### Residuals vs Predicted Price
+
+![Residuals vs Predicted](outputs/checkpoint2/figures/residuals_vs_predicted.png)
+
+This is a standard regression diagnostic plot. The x-axis shows the predicted price, and the y-axis shows the percentage residual.
+
+The visible funnel shape shows that error variance increases as predicted price grows. This pattern is called heteroscedasticity, meaning the model’s errors are not equally spread across all price levels. In practical terms, the model is more consistent for lower and mid-priced homes, but less predictable for expensive homes. This is one reason Random Forest outperforms linear regression here, because linear regression assumes more constant error variance and a simpler relationship between features and price.
+
+### Listing Price Distribution
+
+![Price Distribution](outputs/checkpoint2/figures/price_distribution.png)
+
+This histogram shows the overall distribution of assessed property values in the dataset. Most homes are concentrated around the lower and middle price ranges, while a smaller number of expensive properties create a long right tail.
+
+The median assessed value is about $747K, but the distribution extends to around $5M because of luxury properties. This skew is important because dollar-based metrics like MAE can be heavily influenced by expensive homes. That is why we report both dollar metrics, such as MAE, and percentage metrics, such as MAPE, to evaluate the model more fairly across the full price range.
+
+### Price vs Square Footage
+
+![Price vs Square Footage](outputs/checkpoint2/figures/price_vs_sqft.png)
+
+This scatter plot compares property price against square footage. Each point represents one property.
+
+Although there is a general upward relationship, the plot shows extreme variance in price at the same square footage. For example, a 2,000 sqft property can be worth $400K or several million dollars depending on its neighborhood and other property characteristics. This shows why square footage alone is not enough to predict price. It also motivates our use of ZIP-level Census and Zillow features, because location-related information is necessary to explain why similar-sized homes can have very different values. The visible $5M ceiling comes from outlier clipping during preprocessing.per price tier — the "where does the model fail" plot |
 
 ---
 
@@ -227,7 +269,6 @@ The model's percentage error is highest on the cheapest properties (29.8% MAPE f
 - Cheap properties include distressed/atypical homes that don't fit the standard model
 - Luxury properties have idiosyncratic features (custom finishes, views, historic significance) that we don't capture
 - Most training data is mid-tier, so the model is best in that regime
-- This skew could be mitigated by log-transforming the target, but we chose not to do so to preserve overall R² (which would decrease by ~0.5 points)
 
 ### 3. We model assessed value, not market value
 
@@ -325,6 +366,44 @@ Dependencies (`requirements.txt`):
 - `matplotlib >= 3.8.0`
 - `pytest >= 8.0.0`
 - `requests >= 2.31.0`
+
+---
+
+## Design Decisions
+
+We explored a few additional modeling adjustments during development, which are documented
+here for completeness but not included in the final model.
+
+### Price per square foot
+`price_per_sqft` was an early feature candidate — it directly normalizes price by living
+area and is a standard metric in real estate analysis. We removed it because it is derived
+from the target variable (price), meaning including it would let the model effectively
+see the answer during training. With it included, R² rose to 0.998 — a clear signal of
+target leakage rather than genuine predictive power.
+
+### Property condition encoding
+The Boston assessment data includes three condition ratings assigned by the city assessor:
+`exterior_condition`, `overall_condition`, and `interior_condition`. These use a letter
+scale (E=Excellent, G=Good, A=Average, F=Fair, P=Poor) and were excluded from earlier
+checkpoints pending encoding. We ordinal-encode them (E=5, G=4, A=3, F=2, P=1) and add
+them as three numeric features. A distressed property and a renovated one with identical
+sqft, beds, and baths are indistinguishable to the model without these columns.
+
+Adding condition encoding improved CV R² from 0.868 to 0.879, reduced MAE by ~$4,700,
+and brought median APE down from 10.79% to 10.48%. However, condition ratings are
+subjective assessor judgments rather than objective measurements — two assessors may
+rate the same property differently, and ratings are updated infrequently. We chose not
+to include them in the final submitted model to keep the feature set grounded in
+verifiable, consistently-measured data.
+
+### Log-transform of target price
+Boston assessed prices are strongly right-skewed (median $747K, long luxury tail). Training
+on raw dollar values causes the model to over-weight expensive homes during optimization.
+We explored log-transforming the target via `TransformedTargetRegressor` (fit on log price,
+predictions exponentiated back to dollars) — this reduced MAPE on the cheapest tier from
+29.8% to 22.6% but decreased overall R² by ~0.5 points and increased error on the $2M+
+tier. We chose not to apply it in the final submission to preserve overall model stability
+across price tiers.
 
 ---
 
