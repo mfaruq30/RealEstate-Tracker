@@ -250,7 +250,7 @@ The median assessed value is about $747K, but the distribution extends to around
 
 This scatter plot compares property price against square footage. Each point represents one property.
 
-Although there is a general upward relationship, the plot shows extreme variance in price at the same square footage. For example, a 2,000 sqft property can be worth $400K or several million dollars depending on its neighborhood and other property characteristics. This shows why square footage alone is not enough to predict price. It also motivates our use of ZIP-level Census and Zillow features, because location-related information is necessary to explain why similar-sized homes can have very different values. The visible $5M ceiling comes from outlier clipping during preprocessing.per price tier — the "where does the model fail" plot |
+Although there is a general upward relationship, the plot shows extreme variance in price at the same square footage. For example, a 2,000 sqft property can be worth $400K or several million dollars depending on its neighborhood and other property characteristics. This shows why square footage alone is not enough to predict price. It also motivates our use of ZIP-level Census and Zillow features, because location-related information is necessary to explain why similar-sized homes can have very different values. The visible $5M ceiling comes from outlier clipping during preprocessing.
 
 ---
 
@@ -289,6 +289,44 @@ Linear regression triggers matmul overflow warnings during prediction due to ext
 ### 7. Assumption of independent observations
 
 Our train/test split treats each property as an independent draw. In reality, neighbors influence each other through comps and shared neighborhood factors. A more rigorous evaluation would split by ZIP or by date.
+
+---
+
+## Design Decisions
+
+We explored a few additional modeling adjustments during development, which are documented
+here for completeness but not included in the final model.
+
+### Price per square foot
+`price_per_sqft` was an early feature candidate — it directly normalizes price by living
+area and is a standard metric in real estate analysis. We removed it because it is derived
+from the target variable (price), meaning including it would let the model effectively
+see the answer during training. With it included, R² rose to 0.998 — a clear signal of
+target leakage rather than genuine predictive power.
+
+### Property condition encoding
+The Boston assessment data includes three condition ratings assigned by the city assessor:
+`exterior_condition`, `overall_condition`, and `interior_condition`. These use a letter
+scale (E=Excellent, G=Good, A=Average, F=Fair, P=Poor) and were excluded from earlier
+checkpoints pending encoding. We ordinal-encode them (E=5, G=4, A=3, F=2, P=1) and add
+them as three numeric features. A distressed property and a renovated one with identical
+sqft, beds, and baths are indistinguishable to the model without these columns.
+
+Adding condition encoding improved CV R² from 0.868 to 0.879, reduced MAE by ~$4,700,
+and brought median APE down from 10.79% to 10.48%. However, condition ratings are
+subjective assessor judgments rather than objective measurements — two assessors may
+rate the same property differently, and ratings are updated infrequently. We chose not
+to include them in the final submitted model to keep the feature set grounded in
+verifiable, consistently-measured data.
+
+### Log-transform of target price
+Boston assessed prices are strongly right-skewed (median $747K, long luxury tail). Training
+on raw dollar values causes the model to over-weight expensive homes during optimization.
+We explored log-transforming the target via `TransformedTargetRegressor` (fit on log price,
+predictions exponentiated back to dollars) — this reduced MAPE on the cheapest tier from
+29.8% to 22.6% but decreased overall R² by ~0.5 points and increased error on the $2M+
+tier. We chose not to apply it in the final submission to preserve overall model stability
+across price tiers.
 
 ---
 
@@ -366,44 +404,6 @@ Dependencies (`requirements.txt`):
 - `matplotlib >= 3.8.0`
 - `pytest >= 8.0.0`
 - `requests >= 2.31.0`
-
----
-
-## Design Decisions
-
-We explored a few additional modeling adjustments during development, which are documented
-here for completeness but not included in the final model.
-
-### Price per square foot
-`price_per_sqft` was an early feature candidate — it directly normalizes price by living
-area and is a standard metric in real estate analysis. We removed it because it is derived
-from the target variable (price), meaning including it would let the model effectively
-see the answer during training. With it included, R² rose to 0.998 — a clear signal of
-target leakage rather than genuine predictive power.
-
-### Property condition encoding
-The Boston assessment data includes three condition ratings assigned by the city assessor:
-`exterior_condition`, `overall_condition`, and `interior_condition`. These use a letter
-scale (E=Excellent, G=Good, A=Average, F=Fair, P=Poor) and were excluded from earlier
-checkpoints pending encoding. We ordinal-encode them (E=5, G=4, A=3, F=2, P=1) and add
-them as three numeric features. A distressed property and a renovated one with identical
-sqft, beds, and baths are indistinguishable to the model without these columns.
-
-Adding condition encoding improved CV R² from 0.868 to 0.879, reduced MAE by ~$4,700,
-and brought median APE down from 10.79% to 10.48%. However, condition ratings are
-subjective assessor judgments rather than objective measurements — two assessors may
-rate the same property differently, and ratings are updated infrequently. We chose not
-to include them in the final submitted model to keep the feature set grounded in
-verifiable, consistently-measured data.
-
-### Log-transform of target price
-Boston assessed prices are strongly right-skewed (median $747K, long luxury tail). Training
-on raw dollar values causes the model to over-weight expensive homes during optimization.
-We explored log-transforming the target via `TransformedTargetRegressor` (fit on log price,
-predictions exponentiated back to dollars) — this reduced MAPE on the cheapest tier from
-29.8% to 22.6% but decreased overall R² by ~0.5 points and increased error on the $2M+
-tier. We chose not to apply it in the final submission to preserve overall model stability
-across price tiers.
 
 ---
 
