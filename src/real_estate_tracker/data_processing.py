@@ -276,19 +276,6 @@ def add_assessment_features(df: pd.DataFrame) -> pd.DataFrame:
             0,
         )
 
-    condition_map = {"E": 5, "G": 4, "A": 3, "F": 2, "P": 1}
-    for col in ["exterior_condition", "overall_condition", "interior_condition"]:
-        if col in out.columns:
-            # Values look like "A - Average" / "F - Fair"; use leading code letter.
-            code = (
-                out[col]
-                .astype(str)
-                .str.strip()
-                .str.upper()
-                .str.extract(r"^([A-Z])", expand=False)
-            )
-            out[f"{col}_enc"] = code.map(condition_map).fillna(3).astype(float)
-
     return out
 
 
@@ -349,9 +336,7 @@ def select_assessment_model_columns(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.
         "num_floors", "year_built", "fireplaces",
         "sqft_per_room", "home_age",
         "bath_to_bed_ratio", "lot_to_living_ratio",
-        "is_remodeled", "renovation_gap", "exterior_condition_enc",
-        "overall_condition_enc",
-        "interior_condition_enc",
+        "is_remodeled", "renovation_gap",
         # Enrichment columns (added by feature_enrichment.py)
         "distance_to_nearest_transit_mi",
         "crime_density",

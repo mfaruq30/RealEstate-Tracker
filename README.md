@@ -51,20 +51,20 @@ We do not claim to identify a property's "true" value. We identify properties wh
 
 ## Headline Results
 
-Trained on 136,581 Greater Boston residential properties with 19 features.
+Trained on 136,581 Greater Boston residential properties with 16 features.
 
 ### 5-fold cross-validation results
 
 | Model | MAE | RMSE | R² | MAPE |
 |---|---|---|---|---|
-| Linear Regression (baseline) | $254,079 ± $748 | $405,304 ± $8,873 | 0.5558 ± 0.0178 | 30.23% ± 0.06% |
-| **Random Forest (primary)** | **$129,174 ± $1,380** | **$211,942 ± $4,005** | **0.8785 ± 0.0043** | **15.90% ± 0.24%** |
+| Linear Regression (baseline) | $263,459 ± $929 | $420,700 ± $2,845 | 0.522 ± 0.004 | 31.12% ± 0.13% |
+| **Random Forest (primary)** | **$133,915 ± $1,231** | **$220,750 ± $3,842** | **0.868 ± 0.004** | **16.41% ± 0.21%** |
 
-Random Forest cuts MAE in half compared to the linear baseline and achieves R² = 0.8785 — meaning it explains roughly 87% of the variance in Boston residential prices. The very small standard deviations across folds (R² varies by less than 0.5 percentage points) confirm the model's performance is stable and not an artifact of any particular train/test split.
+Random Forest cuts MAE in half compared to the linear baseline and achieves R² = 0.868 — meaning it explains roughly 87% of the variance in Boston residential prices. The very small standard deviations across folds (R² varies by less than 0.5 percentage points) confirm the model's performance is stable and not an artifact of any particular train/test split.
 
-### Median Absolute Percentage Error: 10.48%
+### Median Absolute Percentage Error: 10.79%
 
-Half of the model's predictions fall within ~10.5% of the actual assessed price, making MAPE a more representative metric than the mean (MAE) given the long-tailed price distribution.
+Half of the model's predictions fall within ~11% of the actual assessed price, making MAPE a more representative metric than the mean (MAE) given the long-tailed price distribution.
 
 ### Error breakdown by price tier
 
@@ -72,14 +72,14 @@ The model's error varies substantially across the price range:
 
 | Price Tier | Properties | MAE | MAPE |
 |---|---|---|---|
-| <$500K | 6,417 | $107,899 | **28.9%** |
-| $500K–$1M | 18,524 | $91,150 | **12.5%** ← sweet spot |
-| $1M–$2M | 7,412 | $176,003 | 13.1% |
-| $2M+ | 1,793 | $447,718 | 14.4% |
+| <$500K | 6,417 | $107,899 | **29.8%** |
+| $500K–$1M | 18,524 | $91,150 | **12.8%** ← sweet spot |
+| $1M–$2M | 7,412 | $176,003 | 13.3% |
+| $2M+ | 1,793 | $447,718 | 15.5% 
 
-The model performs best on mid-tier residential properties ($500K–$1M), where MAPE drops to 12.5%. It degrades on both ends: the cheapest tier has the highest **percentage** error (28.9% — a $107.9K miss on a $400K home is a large fraction of the price), while the luxury tier has the highest **dollar** error ($447.7K average miss). This is shown visually in `outputs/checkpoint2/figures/error_by_price_tier.png`.
+The model performs best on mid-tier residential properties ($500K–$1M), where MAPE drops to 12.8%. It degrades on both ends: the cheapest tier has the highest **percentage** error (29.8% — a $108K miss on a $400K home is a large fraction of the price), while the luxury tier has the highest **dollar** error ($448K average miss). This is shown visually in `outputs/checkpoint2/figures/error_by_price_tier.png`.
 
-For context: Zillow's Zestimate publishes a median absolute percentage error of roughly 2–7% on actively-listed homes. Our 10.48% is notably higher, mostly due to features we don't have (per-property latitude/longitude, sale history, walk score, school district). See **Limitations** below.
+For context: Zillow's Zestimate publishes a median absolute percentage error of roughly 2–7% on actively-listed homes. Our 10.79% is notably higher, mostly due to features we don't have (per-property latitude/longitude, sale history, walk score, school district). See **Limitations** below.
 
 ---
 
@@ -132,7 +132,7 @@ Census matched 100% of properties; Zillow matched ~97% (some Boston ZIPs aren't 
 
 ## Feature Engineering
 
-We use 19 features in three groups:
+We use 16 features in three groups:
 
 ### Structural (8 features)
 Direct measurements from the assessment data:
@@ -149,12 +149,6 @@ Derived in `add_assessment_features`:
 - `lot_to_living_ratio` = urban-vs-suburban signal (condo: ~1, suburban single-family: 5–20)
 - `is_remodeled` = binary flag (`year_remodeled > 0`)
 - `renovation_gap` = years between original build and most recent remodel
-
-### Property Quality (3 features)
-Ordinal-encoded assessor condition ratings, added in `add_assessment_features`:
-- `exterior_condition_enc` — physical state of the building exterior (E=5, G=4, A=3, F=2, P=1)
-- `overall_condition_enc` — assessor's overall judgment of the property
-- `interior_condition_enc` — state of interior finishes, fixtures, and systems
 
 ### Neighborhood signal (2 features)
 ZIP-level features merged from Census ACS:
@@ -192,11 +186,11 @@ Top 5 features by Gini importance, accounting for ~88% of the model's decisions:
 
 | Rank | Feature | Importance |
 |---|---|---|
-| 1 | `total_population` | 27.9% |
-| 2 | `bathrooms` | 22.3% |
-| 3 | `sqft` | 19.7% |
-| 4 | `median_household_income` | 9.8% |
-| 5 | `sqft_per_room` | 5.5% |
+| 1 | `total_population` | 30% |
+| 2 | `bathrooms` | 23% |
+| 3 | `sqft` | 19% |
+| 4 | `median_household_income` | 10% |
+| 5 | `sqft_per_room` | 6% |
 
 `total_population` ranking #1 is initially surprising. The reason: with only 34 ZIP codes in our data, `total_population` has only ~34 distinct values across 136K rows — it's effectively a categorical encoding of which Boston neighborhood a property is in. The Random Forest is using it as a proxy for the lat/long features we don't have. We expect its importance to drop substantially if per-property location features are added.
 
@@ -224,11 +218,11 @@ We are aware of the following limitations and would address them in future work:
 
 ### 1. No per-property location features
 
-Our spatial signal is aggregated at the ZIP-code level (Census income, population, Zillow ZHVI). Per-property features like exact latitude/longitude, transit proximity, walkability, and school zones would substantially improve performance — but require integrating a parcel geocoding step we did not implement. This is the single largest factor explaining the gap between our 10.48% median APE and Zillow's published 2–7%.
+Our spatial signal is aggregated at the ZIP-code level (Census income, population, Zillow ZHVI). Per-property features like exact latitude/longitude, transit proximity, walkability, and school zones would substantially improve performance — but require integrating a parcel geocoding step we did not implement. This is the single largest factor explaining the gap between our 10.79% median APE and Zillow's published 2–7%.
 
 ### 2. Heteroscedastic error by price tier
 
-The model's percentage error is highest on the cheapest properties (28.9% MAPE for <$500K) and dollar error is highest on luxury homes ($447.7K MAE for $2M+). This is visible in both `residuals_vs_predicted.png` and `error_by_price_tier.png`. Possible causes:
+The model's percentage error is highest on the cheapest properties (29.8% MAPE for <$500K) and dollar error is highest on luxury homes ($448K MAE for $2M+). This is visible in both `residuals_vs_predicted.png` and `error_by_price_tier.png`. Possible causes:
 
 - Cheap properties include distressed/atypical homes that don't fit the standard model
 - Luxury properties have idiosyncratic features (custom finishes, views, historic significance) that we don't capture
