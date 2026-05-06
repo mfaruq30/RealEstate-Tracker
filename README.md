@@ -31,7 +31,7 @@ make test        # Run pytest
 
 Run `make help` for a full list of targets.
 
-> **Note on data downloads:** the Boston Property Assessment CSV occasionally returns a 403 from data.boston.gov. If `make data` fails on this file, download the file "Property Assessment FY2026" manually from <https://data.boston.gov/dataset/property-assessment> and save it as `data/raw/boston_property_assessment_fy2026.csv`. Then re-run `make pipeline` and `make model`.
+> **Note on data downloads:** the Boston Property Assessment CSV occasionally returns a 403 from data.boston.gov due to access restrictions on the city’s open data server. This issue is external to our codebase. If `make data` fails on this file, download the file "Property Assessment FY2026" manually from <https://data.boston.gov/dataset/property-assessment> and save it as `data/raw/boston_property_assessment_fy2026.csv`. Then re-run `make pipeline` and `make model`.
 
 ---
 
@@ -416,8 +416,6 @@ Built for CS 506 (Spring 2026, Boston University) by:
 - *[Adi Almukhamet]*
 - *[Mohammed Attia]*
 - *[Clemens Li]*
-
-Replace the placeholder names above with actual teammates before final submission.
 
 ---
 
